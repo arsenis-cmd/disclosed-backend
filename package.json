@@ -1,0 +1,24 @@
+{
+  "name": "proof-of-consideration",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "db:generate": "cd packages/database && prisma generate",
+    "db:push": "cd packages/database && prisma db push",
+    "db:studio": "cd packages/database && prisma studio"
+  },
+  "devDependencies": {
+    "turbo": "^1.11.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

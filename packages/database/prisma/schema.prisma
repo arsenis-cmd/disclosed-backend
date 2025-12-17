@@ -1,0 +1,218 @@
+// packages/database/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CONSIDERER
+  BUYER
+  ADMIN
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ProofStatus {
+  PENDING
+  PROCESSING
+  VERIFIED
+  REJECTED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id                String    @id @default(cuid())
+  clerkId           String    @unique
+  email             String    @unique
+  role              UserRole  @default(CONSIDERER)
+
+  // Profile
+  displayName       String?
+  bio               String?
+  avatarUrl         String?
+
+  // Considerer fields
+  reputationScore   Float     @default(0)
+  totalProofs       Int       @default(0)
+  successfulProofs  Int       @default(0)
+  totalEarned       Float     @default(0)
+
+  // Buyer fields
+  companyName       String?
+  stripeCustomerId  String?
+  stripeAccountId   String?   // For considerers to receive payouts
+
+  // Relations
+  campaigns         Campaign[]
+  proofs            Proof[]
+  paymentsSent      Payment[] @relation("PaymentSender")
+  paymentsReceived  Payment[] @relation("PaymentReceiver")
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Campaign {
+  id                String         @id @default(cuid())
+  buyerId           String
+  buyer             User           @relation(fields: [buyerId], references: [id])
+
+  // Campaign details
+  title             String
+  description       String
+  status            CampaignStatus @default(DRAFT)
+
+  // Content to consider
+  contentType       String         // "text", "video", "image", "url"
+  contentText       String?        // For text content
+  contentUrl        String?        // For video/image/url content
+
+  // Proof specification
+  proofPrompt       String         // What the considerer must respond to
+  proofMinLength    Int            @default(100)
+  proofMaxLength    Int            @default(2000)
+  proofGuidelines   String?        // Additional instructions
+
+  // Verification thresholds
+  minRelevance      Float          @default(0.65)
+  minNovelty        Float          @default(0.70)
+  minCoherence      Float          @default(0.60)
+  minCombinedScore  Float          @default(0.60)
+
+  // Economics
+  bountyAmount      Float          // Amount per verified proof in USD
+  maxResponses      Int            // Maximum number of responses to collect
+  currentResponses  Int            @default(0)
+  budgetTotal       Float          // Total budget allocated
+  budgetSpent       Float          @default(0)
+
+  // Targeting (optional)
+  targetAudience    Json?          // Criteria for matching considerers
+
+  // Timing
+  startDate         DateTime?
+  endDate           DateTime?
+
+  // Relations
+  tasks             Task[]
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model Task {
+  id                String     @id @default(cuid())
+  campaignId        String
+  campaign          Campaign   @relation(fields: [campaignId], references: [id])
+
+  // Task is essentially a "slot" for one response
+  // When a considerer starts a task, it's assigned to them
+  assignedTo        String?
+  assignedAt        DateTime?
+  expiresAt         DateTime?  // If not submitted in time, task becomes available again
+
+  // Relations
+  proof             Proof?
+
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Proof {
+  id                String      @id @default(cuid())
+  taskId            String      @unique
+  task              Task        @relation(fields: [taskId], references: [id])
+  considererId      String
+  considerer        User        @relation(fields: [considererId], references: [id])
+
+  // The proof content
+  responseText      String
+
+  // Metadata captured during submission
+  startedAt         DateTime    // When they started the task
+  submittedAt       DateTime    // When they submitted
+  timeSpentSeconds  Int         // Total time
+  revisionCount     Int         @default(0)
+
+  // Verification results
+  status            ProofStatus @default(PENDING)
+
+  // Individual scores (0-1 scale)
+  relevanceScore    Float?
+  noveltyScore      Float?
+  coherenceScore    Float?
+  effortScore       Float?
+  aiDetectionScore  Float?      // 1 = definitely human, 0 = definitely AI
+
+  // Combined score
+  combinedScore     Float?
+
+  // Verification metadata
+  verifiedAt        DateTime?
+  verificationNotes String?     // Feedback for the considerer
+
+  // Relations
+  payment           Payment?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+
+  proofId           String        @unique
+  proof             Proof         @relation(fields: [proofId], references: [id])
+
+  senderId          String        // Buyer
+  sender            User          @relation("PaymentSender", fields: [senderId], references: [id])
+
+  receiverId        String        // Considerer
+  receiver          User          @relation("PaymentReceiver", fields: [receiverId], references: [id])
+
+  // Amounts
+  grossAmount       Float         // Full bounty
+  protocolFee       Float         // Our cut (e.g., 7%)
+  netAmount         Float         // What considerer receives
+
+  // Stripe
+  stripePaymentIntentId String?
+  stripeTransferId      String?
+
+  status            PaymentStatus @default(PENDING)
+
+  paidAt            DateTime?
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model VerificationLog {
+  id                String   @id @default(cuid())
+  proofId           String
+
+  // Detailed verification data for debugging/improvement
+  rawScores         Json     // All intermediate scores
+  modelVersions     Json     // Which models were used
+  processingTimeMs  Int
+
+  createdAt         DateTime @default(now())
+}
