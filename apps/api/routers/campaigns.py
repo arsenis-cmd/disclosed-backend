@@ -16,18 +16,18 @@ async def create_campaign(
 ):
     """Create a new campaign"""
     try:
-        # Get user ID from clerk_id
-        user_query = "SELECT id, role FROM \"User\" WHERE clerk_id = $1"
+        # Get user ID from clerkId (camelCase in database)
+        user_query = "SELECT id, role FROM \"User\" WHERE \"clerkId\" = $1"
         user = await db.fetchrow(user_query, clerk_id)
 
         if not user:
             # Auto-create user if they don't exist (authenticated via JWT but not yet synced)
             insert_user_query = """
-                INSERT INTO "User" (id, clerk_id, email, role, display_name, created_at, updated_at)
+                INSERT INTO "User" (id, \"clerkId\", email, role, \"displayName\", \"createdAt\", \"updatedAt\")
                 VALUES (gen_random_uuid()::text, $1, $2, 'BUYER', $3, NOW(), NOW())
                 RETURNING id, role
             """
-            # Use clerk_id as email placeholder if not available
+            # Use clerkId as email placeholder if not available
             user = await db.fetchrow(
                 insert_user_query,
                 clerk_id,
@@ -46,16 +46,16 @@ async def create_campaign(
     # Calculate budget total
     budget_total = campaign_data.bounty_amount * campaign_data.max_responses
 
-    # Insert campaign
+    # Insert campaign (use camelCase column names to match database)
     insert_query = """
         INSERT INTO "Campaign" (
-            id, buyer_id, title, description, status,
-            content_type, content_text, content_url,
-            proof_prompt, proof_min_length, proof_max_length, proof_guidelines,
-            min_relevance, min_novelty, min_coherence, min_combined_score,
-            bounty_amount, max_responses, budget_total, budget_spent,
-            target_audience, start_date, end_date,
-            created_at, updated_at
+            id, \"buyerId\", title, description, status,
+            \"contentType\", \"contentText\", \"contentUrl\",
+            \"proofPrompt\", \"proofMinLength\", \"proofMaxLength\", \"proofGuidelines\",
+            \"minRelevance\", \"minNovelty\", \"minCoherence\", \"minCombinedScore\",
+            \"bountyAmount\", \"maxResponses\", \"budgetTotal\", \"budgetSpent\",
+            \"targetAudience\", \"startDate\", \"endDate\",
+            \"createdAt\", \"updatedAt\"
         )
         VALUES (
             gen_random_uuid()::text, $1, $2, $3, 'DRAFT',
