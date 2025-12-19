@@ -15,27 +15,33 @@ async def create_campaign(
     db=Depends(get_db)
 ):
     """Create a new campaign"""
-    # Get user ID from clerk_id
-    user_query = "SELECT id, role FROM \"User\" WHERE clerk_id = $1"
-    user = await db.fetchrow(user_query, clerk_id)
+    try:
+        # Get user ID from clerk_id
+        user_query = "SELECT id, role FROM \"User\" WHERE clerk_id = $1"
+        user = await db.fetchrow(user_query, clerk_id)
 
-    if not user:
-        # Auto-create user if they don't exist (authenticated via JWT but not yet synced)
-        insert_user_query = """
-            INSERT INTO "User" (id, clerk_id, email, role, display_name, created_at, updated_at)
-            VALUES (gen_random_uuid()::text, $1, $2, 'BUYER', $3, NOW(), NOW())
-            RETURNING id, role
-        """
-        # Use clerk_id as email placeholder if not available
-        user = await db.fetchrow(
-            insert_user_query,
-            clerk_id,
-            f"{clerk_id}@temp.email",  # Placeholder email
-            "User"  # Default display name
-        )
+        if not user:
+            # Auto-create user if they don't exist (authenticated via JWT but not yet synced)
+            insert_user_query = """
+                INSERT INTO "User" (id, clerk_id, email, role, display_name, created_at, updated_at)
+                VALUES (gen_random_uuid()::text, $1, $2, 'BUYER', $3, NOW(), NOW())
+                RETURNING id, role
+            """
+            # Use clerk_id as email placeholder if not available
+            user = await db.fetchrow(
+                insert_user_query,
+                clerk_id,
+                f"{clerk_id}@temp.email",  # Placeholder email
+                "User"  # Default display name
+            )
 
-    if user['role'] != 'BUYER':
-        raise HTTPException(status_code=403, detail="Only buyers can create campaigns")
+        if user['role'] != 'BUYER':
+            raise HTTPException(status_code=403, detail="Only buyers can create campaigns")
+    except Exception as e:
+        import traceback
+        print(f"Error in create_campaign (user check): {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     # Calculate budget total
     budget_total = campaign_data.bounty_amount * campaign_data.max_responses
