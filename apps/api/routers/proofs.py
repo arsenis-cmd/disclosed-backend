@@ -1,3 +1,4 @@
+from auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import List
 from datetime import datetime
@@ -363,7 +364,7 @@ async def submit_proof(
 
 
 @router.get("/{proof_id}", response_model=ProofResponse)
-async def get_proof(proof_id: str, clerk_id: str, db=Depends(get_db)):
+async def get_proof(proof_id: str, clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get proof details and scores"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -405,7 +406,7 @@ async def get_proof(proof_id: str, clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/my/proofs")
-async def get_my_proofs(clerk_id: str, db=Depends(get_db)):
+async def get_my_proofs(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get proof history for current user"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"

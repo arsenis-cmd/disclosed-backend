@@ -1,4 +1,5 @@
 import resend
+from typing import Optional
 from config import get_settings
 
 settings = get_settings()
@@ -22,7 +23,7 @@ class EmailService:
         task_title: str,
         passed: bool,
         combined_score: float,
-        earned_amount: float | None
+        earned_amount: Optional[float]
     ):
         """Send email to considerer after proof verification"""
         if not self.enabled:

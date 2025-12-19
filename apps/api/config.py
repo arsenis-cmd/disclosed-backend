@@ -29,7 +29,16 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000"]
+    @property
+    def cors_origins(self):
+        # Allow both localhost and production frontend
+        origins = [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            self.frontend_url
+        ]
+        # Remove duplicates
+        return list(set(origins))
 
     class Config:
         env_file = ".env"

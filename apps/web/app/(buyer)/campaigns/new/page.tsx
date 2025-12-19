@@ -7,8 +7,8 @@ import { APIClient } from '@/lib/api';
 
 export default function CreateCampaignPage() {
   const router = useRouter();
-  const { userId } = useAuth();
-  const api = new APIClient(() => userId);
+  const { getToken } = useAuth();
+  const api = new APIClient(getToken);
 
   const [formData, setFormData] = useState({
     title: '',

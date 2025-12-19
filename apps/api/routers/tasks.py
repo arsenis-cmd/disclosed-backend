@@ -1,3 +1,4 @@
+from auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from datetime import datetime, timedelta
@@ -8,7 +9,7 @@ router = APIRouter()
 
 
 @router.get("", response_model=List[TaskResponse])
-async def list_available_tasks(clerk_id: str, db=Depends(get_db)):
+async def list_available_tasks(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """List available tasks for considerer"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -64,7 +65,7 @@ async def list_available_tasks(clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-async def get_task(task_id: str, clerk_id: str, db=Depends(get_db)):
+async def get_task(task_id: str, clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get task details"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -115,7 +116,7 @@ async def get_task(task_id: str, clerk_id: str, db=Depends(get_db)):
 
 
 @router.post("/{task_id}/accept")
-async def accept_task(task_id: str, clerk_id: str, db=Depends(get_db)):
+async def accept_task(task_id: str, clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Accept/start a task"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -156,7 +157,7 @@ async def accept_task(task_id: str, clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/my/tasks")
-async def get_my_tasks(clerk_id: str, db=Depends(get_db)):
+async def get_my_tasks(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get tasks assigned to current user"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"

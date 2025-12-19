@@ -1,16 +1,21 @@
+"""
+Verification Engine - AID Integration
+Adapter for the new AID (Algorithmic Irreducibility Detection) engine.
+"""
+
 from dataclasses import dataclass, asdict
 from typing import Optional
 import asyncio
 import time
 import hashlib
 import json
-from redis import Redis
+import sys
+import os
 
-from .relevance import RelevanceScorer
-from .novelty import NoveltyScorer
-from .coherence import CoherenceScorer
-from .effort import EffortEstimator
-from .ai_detection import AIDetector
+# Add parent directory to path to import aid module
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from aid import AIDEngine, AIDConfig
 
 
 @dataclass
@@ -46,26 +51,33 @@ class VerificationThresholds:
 
 class VerificationEngine:
     """
-    Main verification orchestrator.
-    Coordinates all scoring components and produces final result.
+    Main verification orchestrator using the AID engine.
+    Maintains backward compatibility with existing API.
     """
 
     def __init__(self, redis_url: str = "redis://localhost:6379"):
-        self.relevance_scorer = RelevanceScorer()
-        self.novelty_scorer = NoveltyScorer()
-        self.coherence_scorer = CoherenceScorer()
-        self.effort_estimator = EffortEstimator()
-        self.ai_detector = AIDetector()
+        # Initialize AID engine with configuration
+        config = AIDConfig(
+            perplexity_model="gpt2-medium",
+            embedding_model="all-MiniLM-L6-v2",
+            use_gpu=True,
+            min_relevance=0.60,
+            min_irreducibility=0.55,
+            min_novelty=0.55,
+            min_coherence=0.50,
+            min_combined=0.55,
+            enable_cache=True,
+            cache_backend="memory",  # Use memory cache for now (redis optional)
+            log_level="INFO"
+        )
 
-        # Redis for caching
-        try:
-            self.redis = Redis.from_url(redis_url, decode_responses=True)
-            self.redis.ping()  # Test connection
-            self.cache_enabled = True
-        except Exception as e:
-            print(f"Redis connection failed: {e}. Caching disabled.")
-            self.redis = None
-            self.cache_enabled = False
+        print("Initializing AID verification engine...")
+        self.aid_engine = AIDEngine(config)
+        print("AID engine initialized successfully")
+
+        # Redis caching (optional, AID has its own cache)
+        self.cache_enabled = False
+        self.redis = None
 
     async def verify(
         self,
@@ -78,104 +90,42 @@ class VerificationEngine:
         thresholds: VerificationThresholds
     ) -> VerificationResult:
         """
-        Run full verification pipeline with caching.
+        Run full verification pipeline using AID engine.
         """
-        # Check cache first (same proof text = same scores)
-        cache_key = None
-        if self.cache_enabled:
-            # Create cache key from proof text
-            text_hash = hashlib.sha256(proof_text.encode()).hexdigest()[:16]
-            cache_key = f"verify:{text_hash}"
-
-            try:
-                cached = self.redis.get(cache_key)
-                if cached:
-                    print(f"Cache hit for verification: {cache_key}")
-                    return VerificationResult.from_json(cached)
-            except Exception as e:
-                print(f"Cache read error: {e}")
-
         start_time = time.time()
 
-        # Run all scorers in parallel
-        relevance_task = self.relevance_scorer.score(proof_text, content_text, proof_prompt)
-        novelty_task = self.novelty_scorer.score(proof_text, content_text, existing_proofs)
-        coherence_task = self.coherence_scorer.score(proof_text)
-        effort_task = self.effort_estimator.score(proof_text, content_text, metadata)
-        ai_task = self.ai_detector.score(proof_text)
+        # Convert threshold to AID format
+        aid_thresholds = {
+            'min_relevance': thresholds.min_relevance,
+            'min_irreducibility': 0.55,  # Use default from AID config
+            'min_novelty': thresholds.min_novelty,
+            'min_coherence': thresholds.min_coherence,
+            'min_combined': thresholds.min_combined
+        }
 
-        results = await asyncio.gather(
-            relevance_task,
-            novelty_task,
-            coherence_task,
-            effort_task,
-            ai_task
-        )
-
-        relevance_score, novelty_score, coherence_score, effort_score, ai_score = results
-
-        # Combined score formula
-        # All components must be reasonable; low scores in any area tank the combined
-        combined_score = (
-            relevance_score *
-            novelty_score *
-            coherence_score *
-            effort_score *
-            ai_score
-        ) ** (1/5)  # Geometric mean
-
-        # Determine pass/fail
-        passed = (
-            relevance_score >= thresholds.min_relevance and
-            novelty_score >= thresholds.min_novelty and
-            coherence_score >= thresholds.min_coherence and
-            combined_score >= thresholds.min_combined
-        )
-
-        # Generate feedback
-        feedback = self._generate_feedback(
-            relevance_score, novelty_score, coherence_score,
-            effort_score, ai_score, thresholds, passed
+        # Run AID verification
+        aid_result = await self.aid_engine.verify(
+            response=proof_text,
+            content=content_text,
+            prompt=proof_prompt,
+            existing_responses=existing_proofs,
+            metadata=metadata,
+            custom_thresholds=aid_thresholds
         )
 
         processing_time = int((time.time() - start_time) * 1000)
 
+        # Convert AID result to legacy VerificationResult format
         result = VerificationResult(
-            relevance_score=round(relevance_score, 3),
-            novelty_score=round(novelty_score, 3),
-            coherence_score=round(coherence_score, 3),
-            effort_score=round(effort_score, 3),
-            ai_detection_score=round(ai_score, 3),
-            combined_score=round(combined_score, 3),
-            passed=passed,
-            feedback=feedback,
+            relevance_score=round(aid_result.relevance.combined, 3),
+            novelty_score=round(aid_result.novelty.combined, 3),
+            coherence_score=round(aid_result.coherence.combined, 3),
+            effort_score=round(aid_result.effort.combined, 3),
+            ai_detection_score=round(aid_result.ai_detection.combined, 3),
+            combined_score=round(aid_result.combined_score, 3),
+            passed=aid_result.passed,
+            feedback=aid_result.feedback_summary,
             processing_time_ms=processing_time
         )
 
-        # Cache result for 1 hour (in case of retries/disputes)
-        if self.cache_enabled and cache_key:
-            try:
-                self.redis.setex(cache_key, 3600, result.to_json())
-                print(f"Cached verification result: {cache_key}")
-            except Exception as e:
-                print(f"Cache write error: {e}")
-
         return result
-
-    def _generate_feedback(self, rel, nov, coh, eff, ai, thresholds, passed) -> str:
-        if passed:
-            return "Your response demonstrated genuine consideration. Thank you!"
-
-        issues = []
-        if rel < thresholds.min_relevance:
-            issues.append("Response didn't engage enough with the specific content")
-        if nov < thresholds.min_novelty:
-            issues.append("Response was too similar to other submissions or generic")
-        if coh < thresholds.min_coherence:
-            issues.append("Response lacked clear logical structure")
-        if ai < 0.5:
-            issues.append("Response showed patterns typical of AI-generated content")
-        if eff < 0.5:
-            issues.append("Response appeared to require minimal effort")
-
-        return "Verification failed: " + "; ".join(issues)

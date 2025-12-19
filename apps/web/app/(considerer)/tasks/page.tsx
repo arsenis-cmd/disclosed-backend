@@ -8,16 +8,16 @@ import { formatCurrency } from '@/lib/utils';
 
 export default function TasksPage() {
   const router = useRouter();
-  const { userId } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const api = new APIClient(() => userId);
+  const api = new APIClient(getToken);
 
   useEffect(() => {
-    if (userId) {
+    if (isLoaded && isSignedIn) {
       loadTasks();
     }
-  }, [userId]);
+  }, [isLoaded, isSignedIn]);
 
   const loadTasks = async () => {
     try {

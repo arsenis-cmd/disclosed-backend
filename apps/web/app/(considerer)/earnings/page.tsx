@@ -8,8 +8,8 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export default function EarningsPage() {
   const router = useRouter();
-  const { userId } = useAuth();
-  const api = new APIClient(() => userId);
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const api = new APIClient(getToken);
 
   const [balance, setBalance] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
@@ -17,10 +17,10 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (userId) {
+    if (isLoaded && isSignedIn) {
       loadData();
     }
-  }, [userId]);
+  }, [isLoaded, isSignedIn]);
 
   const loadData = async () => {
     try {

@@ -12,27 +12,31 @@ const API_URL = getApiUrl();
 
 export class APIClient {
   private baseUrl: string;
-  private getClerkId: () => string | null | undefined;
+  private getToken: () => Promise<string | null>;
 
-  constructor(getClerkId: () => string | null | undefined) {
+  constructor(getToken: () => Promise<string | null>) {
     this.baseUrl = `${API_URL}/api/v1`;
-    this.getClerkId = getClerkId;
+    this.getToken = getToken;
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const clerkId = this.getClerkId();
+    // Get Clerk session token
+    const token = await this.getToken();
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };
 
-    const url = clerkId && !endpoint.includes('?')
-      ? `${this.baseUrl}${endpoint}?clerk_id=${clerkId}`
-      : `${this.baseUrl}${endpoint}${clerkId ? `&clerk_id=${clerkId}` : ''}`;
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = `${this.baseUrl}${endpoint}`;
 
     try {
       const response = await fetch(url, {

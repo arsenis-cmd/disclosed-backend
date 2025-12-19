@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from database import get_db
 from schemas.user import UserCreate, UserUpdate, UserResponse, UserStats
+from auth import get_current_user
 
 router = APIRouter()
 
@@ -46,7 +47,10 @@ async def sync_user(user_data: UserCreate, db=Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(clerk_id: str, db=Depends(get_db)):
+async def get_user_profile(
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Get current user profile"""
     query = "SELECT * FROM \"User\" WHERE clerk_id = $1"
     user = await db.fetchrow(query, clerk_id)
@@ -59,8 +63,8 @@ async def get_current_user(clerk_id: str, db=Depends(get_db)):
 
 @router.patch("/me", response_model=UserResponse)
 async def update_current_user(
-    clerk_id: str,
     user_update: UserUpdate,
+    clerk_id: str = Depends(get_current_user),
     db=Depends(get_db)
 ):
     """Update current user profile"""
@@ -94,7 +98,10 @@ async def update_current_user(
 
 
 @router.get("/me/stats", response_model=UserStats)
-async def get_user_stats(clerk_id: str, db=Depends(get_db)):
+async def get_user_stats(
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Get user statistics"""
     # Get user
     user_query = "SELECT * FROM \"User\" WHERE clerk_id = $1"
@@ -122,7 +129,10 @@ async def get_user_stats(clerk_id: str, db=Depends(get_db)):
 
 
 @router.post("/me/stripe-account")
-async def create_stripe_account(clerk_id: str, db=Depends(get_db)):
+async def create_stripe_account(
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Create Stripe Connect account for considerer to receive payouts"""
     # TODO: Implement Stripe Connect account creation
     # This will be implemented in the payments integration

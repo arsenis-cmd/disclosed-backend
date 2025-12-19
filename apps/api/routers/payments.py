@@ -1,3 +1,4 @@
+from auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from database import get_db
@@ -10,7 +11,7 @@ stripe.api_key = settings.stripe_secret_key
 
 
 @router.post("/connect/onboard")
-async def create_stripe_connect_account(clerk_id: str, db=Depends(get_db)):
+async def create_stripe_connect_account(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Create Stripe Connect Express account for considerer"""
     # Get user
     user_query = "SELECT id, email, display_name FROM \"User\" WHERE clerk_id = $1"
@@ -77,7 +78,7 @@ async def create_stripe_connect_account(clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/connect/status")
-async def get_stripe_connect_status(clerk_id: str, db=Depends(get_db)):
+async def get_stripe_connect_status(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Check if considerer's Stripe account is ready for payouts"""
     # Get user
     user_query = "SELECT stripe_account_id FROM \"User\" WHERE clerk_id = $1"
@@ -113,7 +114,7 @@ async def get_stripe_connect_status(clerk_id: str, db=Depends(get_db)):
 
 
 @router.post("/connect/dashboard")
-async def get_stripe_dashboard_link(clerk_id: str, db=Depends(get_db)):
+async def get_stripe_dashboard_link(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get Stripe Express dashboard URL for considerer"""
     # Get user
     user_query = "SELECT stripe_account_id FROM \"User\" WHERE clerk_id = $1"
@@ -137,7 +138,7 @@ async def get_stripe_dashboard_link(clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/my")
-async def get_my_payments(clerk_id: str, db=Depends(get_db)):
+async def get_my_payments(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get payment history for current user"""
     # Get user
     user_query = "SELECT id, role FROM \"User\" WHERE clerk_id = $1"
@@ -175,7 +176,7 @@ async def get_my_payments(clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/balance")
-async def get_balance(clerk_id: str, db=Depends(get_db)):
+async def get_balance(clerk_id: str = Depends(get_current_user), db=Depends(get_db)):
     """Get pending balance for considerer"""
     # Get user
     user_query = "SELECT id, role FROM \"User\" WHERE clerk_id = $1"

@@ -3,12 +3,17 @@ from typing import List
 from datetime import datetime, timedelta
 from database import get_db
 from schemas.campaign import CampaignCreate, CampaignUpdate, CampaignResponse, CampaignAnalytics
+from auth import get_current_user
 
 router = APIRouter()
 
 
 @router.post("", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
-async def create_campaign(campaign_data: CampaignCreate, clerk_id: str, db=Depends(get_db)):
+async def create_campaign(
+    campaign_data: CampaignCreate,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Create a new campaign"""
     # Get user ID from clerk_id
     user_query = "SELECT id, role FROM \"User\" WHERE clerk_id = $1"
@@ -74,7 +79,10 @@ async def create_campaign(campaign_data: CampaignCreate, clerk_id: str, db=Depen
 
 
 @router.get("", response_model=List[CampaignResponse])
-async def list_campaigns(clerk_id: str, db=Depends(get_db)):
+async def list_campaigns(
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """List campaigns for current user (buyer)"""
     # Get user ID from clerk_id
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -95,7 +103,11 @@ async def list_campaigns(clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/{campaign_id}", response_model=CampaignResponse)
-async def get_campaign(campaign_id: str, clerk_id: str, db=Depends(get_db)):
+async def get_campaign(
+    campaign_id: str,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Get campaign details"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -170,7 +182,11 @@ async def update_campaign(
 
 
 @router.post("/{campaign_id}/activate")
-async def activate_campaign(campaign_id: str, clerk_id: str, db=Depends(get_db)):
+async def activate_campaign(
+    campaign_id: str,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Activate campaign and create tasks"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -215,7 +231,11 @@ async def activate_campaign(campaign_id: str, clerk_id: str, db=Depends(get_db))
 
 
 @router.post("/{campaign_id}/pause")
-async def pause_campaign(campaign_id: str, clerk_id: str, db=Depends(get_db)):
+async def pause_campaign(
+    campaign_id: str,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Pause campaign"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -247,7 +267,11 @@ async def pause_campaign(campaign_id: str, clerk_id: str, db=Depends(get_db)):
 
 
 @router.get("/{campaign_id}/responses")
-async def get_campaign_responses(campaign_id: str, clerk_id: str, db=Depends(get_db)):
+async def get_campaign_responses(
+    campaign_id: str,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Get all verified responses for a campaign"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
@@ -281,7 +305,11 @@ async def get_campaign_responses(campaign_id: str, clerk_id: str, db=Depends(get
 
 
 @router.get("/{campaign_id}/analytics", response_model=CampaignAnalytics)
-async def get_campaign_analytics(campaign_id: str, clerk_id: str, db=Depends(get_db)):
+async def get_campaign_analytics(
+    campaign_id: str,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """Get campaign analytics"""
     # Get user
     user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
