@@ -102,8 +102,8 @@ async def list_campaigns(
     db=Depends(get_db)
 ):
     """List campaigns for current user (buyer)"""
-    # Get user ID from clerk_id
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    # Get user ID from clerkId
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -112,8 +112,8 @@ async def list_campaigns(
     # Get campaigns
     query = """
         SELECT * FROM "Campaign"
-        WHERE buyer_id = $1
-        ORDER BY created_at DESC
+        WHERE \"buyerId\" = $1
+        ORDER BY \"createdAt\" DESC
     """
     campaigns = await db.fetch(query, user['id'])
 
@@ -128,7 +128,7 @@ async def get_campaign(
 ):
     """Get campaign details"""
     # Get user
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -142,7 +142,7 @@ async def get_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
 
     # Check ownership
-    if campaign['buyer_id'] != user['id']:
+    if campaign['buyerId'] != user['id']:
         raise HTTPException(status_code=403, detail="Not authorized to view this campaign")
 
     return dict(campaign)
@@ -157,7 +157,7 @@ async def update_campaign(
 ):
     """Update campaign"""
     # Get user
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -170,7 +170,7 @@ async def update_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    if campaign['buyer_id'] != user['id']:
+    if campaign['buyerId'] != user['id']:
         raise HTTPException(status_code=403, detail="Not authorized to update this campaign")
 
     # Build dynamic update query
@@ -207,7 +207,7 @@ async def activate_campaign(
 ):
     """Activate campaign and create tasks"""
     # Get user
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -220,7 +220,7 @@ async def activate_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    if campaign['buyer_id'] != user['id']:
+    if campaign['buyerId'] != user['id']:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if campaign['status'] != 'DRAFT':
@@ -231,16 +231,16 @@ async def activate_campaign(
     # Update campaign status
     update_query = """
         UPDATE "Campaign"
-        SET status = 'ACTIVE', start_date = NOW(), updated_at = NOW()
+        SET status = 'ACTIVE', \"startDate\" = NOW(), \"updatedAt\" = NOW()
         WHERE id = $1
         RETURNING *
     """
     updated_campaign = await db.fetchrow(update_query, campaign_id)
 
     # Create tasks
-    for i in range(campaign['max_responses']):
+    for i in range(campaign['maxResponses']):
         insert_task_query = """
-            INSERT INTO "Task" (id, campaign_id, created_at, updated_at)
+            INSERT INTO "Task" (id, \"campaignId\", \"createdAt\", \"updatedAt\")
             VALUES (gen_random_uuid()::text, $1, NOW(), NOW())
         """
         await db.execute(insert_task_query, campaign_id)
@@ -256,7 +256,7 @@ async def pause_campaign(
 ):
     """Pause campaign"""
     # Get user
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -269,13 +269,13 @@ async def pause_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    if campaign['buyer_id'] != user['id']:
+    if campaign['buyerId'] != user['id']:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Update status
     update_query = """
         UPDATE "Campaign"
-        SET status = 'PAUSED', updated_at = NOW()
+        SET status = 'PAUSED', \"updatedAt\" = NOW()
         WHERE id = $1
         RETURNING *
     """
@@ -292,7 +292,7 @@ async def get_campaign_responses(
 ):
     """Get all verified responses for a campaign"""
     # Get user
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -305,17 +305,17 @@ async def get_campaign_responses(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    if campaign['buyer_id'] != user['id']:
+    if campaign['buyerId'] != user['id']:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Get verified proofs
     query = """
-        SELECT p.*, u.display_name, u.email
+        SELECT p.*, u.\"displayName\", u.email
         FROM "Proof" p
-        JOIN "Task" t ON p.task_id = t.id
-        JOIN "User" u ON p.considerer_id = u.id
-        WHERE t.campaign_id = $1 AND p.status = 'VERIFIED'
-        ORDER BY p.verified_at DESC
+        JOIN "Task" t ON p.\"taskId\" = t.id
+        JOIN "User" u ON p.\"considererId\" = u.id
+        WHERE t.\"campaignId\" = $1 AND p.status = 'VERIFIED'
+        ORDER BY p.\"verifiedAt\" DESC
     """
     proofs = await db.fetch(query, campaign_id)
 
@@ -330,7 +330,7 @@ async def get_campaign_analytics(
 ):
     """Get campaign analytics"""
     # Get user
-    user_query = "SELECT id FROM \"User\" WHERE clerk_id = $1"
+    user_query = "SELECT id FROM \"User\" WHERE \"clerkId\" = $1"
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
@@ -343,7 +343,7 @@ async def get_campaign_analytics(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    if campaign['buyer_id'] != user['id']:
+    if campaign['buyerId'] != user['id']:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Get analytics
@@ -352,13 +352,13 @@ async def get_campaign_analytics(
             COUNT(*) as total_responses,
             COUNT(*) FILTER (WHERE p.status = 'VERIFIED') as verified_responses,
             COUNT(*) FILTER (WHERE p.status = 'REJECTED') as rejected_responses,
-            AVG(p.relevance_score) FILTER (WHERE p.status = 'VERIFIED') as avg_relevance,
-            AVG(p.novelty_score) FILTER (WHERE p.status = 'VERIFIED') as avg_novelty,
-            AVG(p.coherence_score) FILTER (WHERE p.status = 'VERIFIED') as avg_coherence,
-            AVG(p.combined_score) FILTER (WHERE p.status = 'VERIFIED') as avg_combined
+            AVG(p.\"relevanceScore\") FILTER (WHERE p.status = 'VERIFIED') as avg_relevance,
+            AVG(p.\"noveltyScore\") FILTER (WHERE p.status = 'VERIFIED') as avg_novelty,
+            AVG(p.\"coherenceScore\") FILTER (WHERE p.status = 'VERIFIED') as avg_coherence,
+            AVG(p.\"combinedScore\") FILTER (WHERE p.status = 'VERIFIED') as avg_combined
         FROM "Proof" p
-        JOIN "Task" t ON p.task_id = t.id
-        WHERE t.campaign_id = $1
+        JOIN "Task" t ON p.\"taskId\" = t.id
+        WHERE t.\"campaignId\" = $1
     """
     analytics = await db.fetchrow(analytics_query, campaign_id)
 
@@ -370,6 +370,6 @@ async def get_campaign_analytics(
         "average_novelty_score": analytics['avg_novelty'] or 0,
         "average_coherence_score": analytics['avg_coherence'] or 0,
         "average_combined_score": analytics['avg_combined'] or 0,
-        "budget_spent": campaign['budget_spent'],
-        "budget_remaining": campaign['budget_total'] - campaign['budget_spent']
+        "budget_spent": campaign['budgetSpent'],
+        "budget_remaining": campaign['budgetTotal'] - campaign['budgetSpent']
     }

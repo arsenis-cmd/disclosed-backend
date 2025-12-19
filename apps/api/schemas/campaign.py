@@ -35,31 +35,31 @@ class CampaignUpdate(BaseModel):
 
 class CampaignResponse(BaseModel):
     id: str
-    buyer_id: str
+    buyerId: str
     title: str
     description: str
     status: str
-    content_type: str
-    content_text: Optional[str]
-    content_url: Optional[str]
-    proof_prompt: str
-    proof_min_length: int
-    proof_max_length: int
-    proof_guidelines: Optional[str]
-    min_relevance: float
-    min_novelty: float
-    min_coherence: float
-    min_combined_score: float
-    bounty_amount: float
-    max_responses: int
-    current_responses: int
-    budget_total: float
-    budget_spent: float
-    target_audience: Optional[Dict[str, Any]]
-    start_date: Optional[datetime]
-    end_date: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
+    contentType: str
+    contentText: Optional[str]
+    contentUrl: Optional[str]
+    proofPrompt: str
+    proofMinLength: int
+    proofMaxLength: int
+    proofGuidelines: Optional[str]
+    minRelevance: float
+    minNovelty: float
+    minCoherence: float
+    minCombinedScore: float
+    bountyAmount: float
+    maxResponses: int
+    currentResponses: int
+    budgetTotal: float
+    budgetSpent: float
+    targetAudience: Optional[Dict[str, Any]]
+    startDate: Optional[datetime]
+    endDate: Optional[datetime]
+    createdAt: datetime
+    updatedAt: datetime
 
     class Config:
         from_attributes = True
