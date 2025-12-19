@@ -23,7 +23,7 @@ interface Task {
 
 export default function SubmitProofPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const api = new APIClient(getToken);
   const [task, setTask] = useState<Task | null>(null);
   const [response, setResponse] = useState('');
@@ -37,10 +37,10 @@ export default function SubmitProofPage({ params }: { params: { id: string } }) 
   const lastText = useRef('');
 
   useEffect(() => {
-    if (userId) {
+    if (isLoaded && isSignedIn) {
       fetchTask();
     }
-  }, [params.id, userId]);
+  }, [params.id, isLoaded, isSignedIn]);
 
   useEffect(() => {
     // Track revisions (significant changes)
