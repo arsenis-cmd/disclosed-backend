@@ -176,4 +176,20 @@ export class APIClient {
       method: 'POST',
     });
   }
+
+  async getStripeConnectStatus(): Promise<any> {
+    return this.request('/payments/connect/status');
+  }
+
+  async createStripeConnectOnboarding(): Promise<any> {
+    return this.request('/payments/connect/onboard', {
+      method: 'POST',
+    });
+  }
+
+  async getStripeConnectDashboard(): Promise<any> {
+    return this.request('/payments/connect/dashboard', {
+      method: 'POST',
+    });
+  }
 }

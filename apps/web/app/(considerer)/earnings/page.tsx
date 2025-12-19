@@ -27,8 +27,7 @@ export default function EarningsPage() {
       const [balanceData, paymentsData, statusData] = await Promise.all([
         api.getBalance(),
         api.getMyPayments(),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/connect/status?clerk_id=${userId}`)
-          .then(res => res.json())
+        api.getStripeConnectStatus()
       ]);
 
       setBalance(balanceData);
@@ -43,11 +42,7 @@ export default function EarningsPage() {
 
   const handleSetupPayouts = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/connect/onboard?clerk_id=${userId}`,
-        { method: 'POST' }
-      );
-      const data = await response.json();
+      const data = await api.createStripeConnectOnboarding();
 
       if (data.url) {
         window.location.href = data.url;
@@ -59,11 +54,7 @@ export default function EarningsPage() {
 
   const handleViewDashboard = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/connect/dashboard?clerk_id=${userId}`,
-        { method: 'POST' }
-      );
-      const data = await response.json();
+      const data = await api.getStripeConnectDashboard();
 
       if (data.url) {
         window.open(data.url, '_blank');
