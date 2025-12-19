@@ -48,6 +48,15 @@ export class APIClient {
         const error = await response.json().catch(() => ({
           detail: `API Error: ${response.status} ${response.statusText}`
         }));
+
+        // Handle validation errors (array of error objects)
+        if (Array.isArray(error.detail)) {
+          const errors = error.detail.map((err: any) =>
+            `${err.loc?.join('.') || 'Field'}: ${err.msg}`
+          ).join(', ');
+          throw new Error(errors);
+        }
+
         throw new Error(error.detail || `API Error: ${response.status}`);
       }
 
@@ -86,9 +95,31 @@ export class APIClient {
 
   // Campaigns
   async createCampaign(campaignData: any): Promise<{ id: string; [key: string]: any }> {
+    // Transform camelCase to snake_case for backend
+    const transformedData = {
+      title: campaignData.title,
+      description: campaignData.description,
+      content_type: campaignData.contentType,
+      content_text: campaignData.contentText,
+      content_url: campaignData.contentUrl,
+      proof_prompt: campaignData.proofPrompt,
+      proof_min_length: campaignData.proofMinLength,
+      proof_max_length: campaignData.proofMaxLength,
+      proof_guidelines: campaignData.proofGuidelines,
+      min_relevance: campaignData.minRelevance,
+      min_novelty: campaignData.minNovelty,
+      min_coherence: campaignData.minCoherence,
+      min_combined_score: campaignData.minCombinedScore,
+      bounty_amount: campaignData.bountyAmount,
+      max_responses: campaignData.maxResponses,
+      target_audience: campaignData.targetAudience,
+      start_date: campaignData.startDate,
+      end_date: campaignData.endDate,
+    };
+
     return this.request('/campaigns', {
       method: 'POST',
-      body: JSON.stringify(campaignData),
+      body: JSON.stringify(transformedData),
     });
   }
 
