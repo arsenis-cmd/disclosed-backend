@@ -20,7 +20,19 @@ async def create_campaign(
     user = await db.fetchrow(user_query, clerk_id)
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Auto-create user if they don't exist (authenticated via JWT but not yet synced)
+        insert_user_query = """
+            INSERT INTO "User" (id, clerk_id, email, role, display_name, created_at, updated_at)
+            VALUES (gen_random_uuid()::text, $1, $2, 'BUYER', $3, NOW(), NOW())
+            RETURNING id, role
+        """
+        # Use clerk_id as email placeholder if not available
+        user = await db.fetchrow(
+            insert_user_query,
+            clerk_id,
+            f"{clerk_id}@temp.email",  # Placeholder email
+            "User"  # Default display name
+        )
 
     if user['role'] != 'BUYER':
         raise HTTPException(status_code=403, detail="Only buyers can create campaigns")
