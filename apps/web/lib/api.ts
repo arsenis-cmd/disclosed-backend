@@ -62,9 +62,17 @@ export class APIClient {
 
       return response.json();
     } catch (err: any) {
+      // Log the actual error for debugging
+      console.error('API Request Error:', {
+        url,
+        error: err,
+        message: err.message,
+        type: err.name,
+      });
+
       // If it's a network error (can't reach server)
-      if (err.message.includes('fetch')) {
-        throw new Error(`Cannot connect to backend at ${this.baseUrl}. Please check if the backend is running.`);
+      if (err.message && (err.message.includes('fetch') || err.message.includes('Failed to fetch'))) {
+        throw new Error(`Cannot connect to backend at ${this.baseUrl}. Error: ${err.message}`);
       }
       throw err;
     }
