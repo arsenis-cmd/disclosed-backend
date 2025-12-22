@@ -17,19 +17,19 @@ app = FastAPI(
 # Rate Limiting (must be first to protect all endpoints)
 app.middleware("http")(rate_limit_middleware)
 
-# CORS - Build origins list
-cors_origins = list(set([
+# CORS - Temporarily allow all origins for debugging
+print(f"FRONTEND_URL from settings: {settings.frontend_url}")
+cors_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://proof-of-consideration.vercel.app",
     "https://disclosed.vercel.app",
-    settings.frontend_url
-]))
+]
 print(f"CORS Origins configured: {cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["*"],  # Temporarily allow all for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
