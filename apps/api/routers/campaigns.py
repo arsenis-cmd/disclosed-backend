@@ -4,9 +4,10 @@ from datetime import datetime, timedelta
 from database import get_db
 from schemas.campaign import CampaignCreate, CampaignUpdate, CampaignResponse, CampaignAnalytics
 from auth import get_current_user
-from config import settings
+from config import get_settings
 import stripe
 
+settings = get_settings()
 stripe.api_key = settings.stripe_secret_key
 router = APIRouter()
 
