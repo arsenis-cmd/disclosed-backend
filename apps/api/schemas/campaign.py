@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -34,35 +34,34 @@ class CampaignUpdate(BaseModel):
 
 
 class CampaignResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
     id: str
-    buyerId: str
+    buyer_id: str = Field(alias="buyerId")
     title: str
     description: str
     status: str
-    contentType: str
-    contentText: Optional[str]
-    contentUrl: Optional[str]
-    proofPrompt: str
-    proofMinLength: int
-    proofMaxLength: int
-    proofGuidelines: Optional[str]
-    minRelevance: float
-    minNovelty: float
-    minCoherence: float
-    minCombinedScore: float
-    bountyAmount: float
-    maxResponses: int
-    currentResponses: int
-    budgetTotal: float
-    budgetSpent: float
-    targetAudience: Optional[Dict[str, Any]]
-    startDate: Optional[datetime]
-    endDate: Optional[datetime]
-    createdAt: datetime
-    updatedAt: datetime
-
-    class Config:
-        from_attributes = True
+    content_type: str = Field(alias="contentType")
+    content_text: Optional[str] = Field(alias="contentText")
+    content_url: Optional[str] = Field(alias="contentUrl")
+    proof_prompt: str = Field(alias="proofPrompt")
+    proof_min_length: int = Field(alias="proofMinLength")
+    proof_max_length: int = Field(alias="proofMaxLength")
+    proof_guidelines: Optional[str] = Field(alias="proofGuidelines")
+    min_relevance: float = Field(alias="minRelevance")
+    min_novelty: float = Field(alias="minNovelty")
+    min_coherence: float = Field(alias="minCoherence")
+    min_combined_score: float = Field(alias="minCombinedScore")
+    bounty_amount: float = Field(alias="bountyAmount")
+    max_responses: int = Field(alias="maxResponses")
+    current_responses: int = Field(alias="currentResponses")
+    budget_total: float = Field(alias="budgetTotal")
+    budget_spent: float = Field(alias="budgetSpent")
+    target_audience: Optional[Dict[str, Any]] = Field(alias="targetAudience")
+    start_date: Optional[datetime] = Field(alias="startDate")
+    end_date: Optional[datetime] = Field(alias="endDate")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
 
 
 class CampaignAnalytics(BaseModel):
