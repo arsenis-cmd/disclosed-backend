@@ -35,6 +35,8 @@ class Settings(BaseSettings):
         origins = [
             "http://localhost:3000",
             "http://localhost:3001",
+            "https://proof-of-consideration.vercel.app",
+            "https://disclosed.vercel.app",
             self.frontend_url
         ]
         # Remove duplicates
