@@ -4,7 +4,10 @@ from datetime import datetime, timedelta
 from database import get_db
 from schemas.campaign import CampaignCreate, CampaignUpdate, CampaignResponse, CampaignAnalytics
 from auth import get_current_user
+from config import settings
+import stripe
 
+stripe.api_key = settings.stripe_secret_key
 router = APIRouter()
 
 
@@ -94,6 +97,65 @@ async def create_campaign(
     )
 
     return dict(campaign)
+
+
+@router.post("/{campaign_id}/checkout")
+async def create_checkout_session(
+    campaign_id: str,
+    clerk_id: str = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Create Stripe checkout session for campaign payment"""
+    # Get user
+    user_query = "SELECT id, email FROM \"User\" WHERE \"clerkId\" = $1"
+    user = await db.fetchrow(user_query, clerk_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get campaign
+    campaign_query = "SELECT * FROM \"Campaign\" WHERE id = $1"
+    campaign = await db.fetchrow(campaign_query, campaign_id)
+
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign['buyerId'] != user['id']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if campaign['status'] != 'DRAFT':
+        raise HTTPException(status_code=400, detail="Campaign is not in DRAFT status")
+
+    try:
+        # Create Stripe checkout session
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': f'Campaign: {campaign["title"]}',
+                        'description': f'{campaign["maxResponses"]} responses at ${campaign["bountyAmount"]:.2f} each',
+                    },
+                    'unit_amount': int(campaign['budgetTotal'] * 100),  # Convert to cents
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=f'{settings.frontend_url}/dashboard?payment=success&campaign_id={campaign_id}',
+            cancel_url=f'{settings.frontend_url}/campaigns/new?payment=canceled',
+            client_reference_id=campaign_id,
+            customer_email=user['email'],
+            metadata={
+                'campaign_id': campaign_id,
+                'buyer_id': user['id'],
+            }
+        )
+
+        return {"checkout_url": checkout_session.url, "session_id": checkout_session.id}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create checkout session: {str(e)}")
 
 
 @router.get("", response_model=List[CampaignResponse])

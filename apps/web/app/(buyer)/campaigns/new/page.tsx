@@ -46,10 +46,11 @@ export default function CreateCampaignPage() {
 
     try {
       const campaign = await api.createCampaign(formData);
-      router.push('/dashboard');
+      // Create checkout session and redirect to Stripe
+      const { checkout_url } = await api.createCheckoutSession(campaign.id);
+      window.location.href = checkout_url;
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setIsSubmitting(false);
     }
   };

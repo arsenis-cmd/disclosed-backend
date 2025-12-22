@@ -146,6 +146,12 @@ export class APIClient {
     });
   }
 
+  async createCheckoutSession(id: string): Promise<{ checkout_url: string; session_id: string }> {
+    return this.request(`/campaigns/${id}/checkout`, {
+      method: 'POST',
+    });
+  }
+
   async activateCampaign(id: string): Promise<any> {
     return this.request(`/campaigns/${id}/activate`, {
       method: 'POST',
