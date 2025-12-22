@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from pydantic import computed_field
 from functools import lru_cache
 
 
@@ -28,20 +27,6 @@ class Settings(BaseSettings):
 
     # Frontend
     frontend_url: str = "http://localhost:3000"
-
-    @computed_field
-    @property
-    def cors_origins(self) -> list[str]:
-        """Compute CORS origins from frontend_url and hardcoded values"""
-        origins = list(set([
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "https://proof-of-consideration.vercel.app",
-            "https://disclosed.vercel.app",
-            self.frontend_url
-        ]))
-        print(f"CORS Origins: {origins}")
-        return origins
 
     class Config:
         env_file = ".env"
