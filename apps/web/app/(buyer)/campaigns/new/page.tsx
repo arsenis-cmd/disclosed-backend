@@ -46,7 +46,7 @@ export default function CreateCampaignPage() {
 
     try {
       const campaign = await api.createCampaign(formData);
-      router.push(`/campaigns/${campaign.id}`);
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
     } finally {
