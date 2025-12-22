@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 from datetime import datetime, timedelta
 from database import get_db
@@ -156,6 +156,61 @@ async def create_checkout_session(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create checkout session: {str(e)}")
+
+
+@router.post("/webhook/stripe")
+async def stripe_webhook(request: Request, db=Depends(get_db)):
+    """Handle Stripe webhook events"""
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.stripe_webhook_secret
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    # Handle checkout.session.completed event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        campaign_id = session.get('client_reference_id') or session['metadata'].get('campaign_id')
+
+        if not campaign_id:
+            return {"status": "error", "message": "No campaign_id in session"}
+
+        # Get campaign
+        campaign_query = "SELECT * FROM \"Campaign\" WHERE id = $1"
+        campaign = await db.fetchrow(campaign_query, campaign_id)
+
+        if not campaign:
+            return {"status": "error", "message": "Campaign not found"}
+
+        if campaign['status'] != 'DRAFT':
+            return {"status": "already_processed"}
+
+        # Activate campaign
+        update_query = """
+            UPDATE \"Campaign\"
+            SET status = 'ACTIVE', \"startDate\" = NOW(), \"updatedAt\" = NOW()
+            WHERE id = $1
+            RETURNING *
+        """
+        updated_campaign = await db.fetchrow(update_query, campaign_id)
+
+        # Create tasks for the campaign
+        for i in range(campaign['maxResponses']):
+            insert_task_query = """
+                INSERT INTO \"Task\" (id, \"campaignId\", \"createdAt\", \"updatedAt\")
+                VALUES (gen_random_uuid()::text, $1, NOW(), NOW())
+            """
+            await db.execute(insert_task_query, campaign_id)
+
+        return {"status": "success", "campaign_id": campaign_id}
+
+    return {"status": "ignored"}
 
 
 @router.get("", response_model=List[CampaignResponse])
