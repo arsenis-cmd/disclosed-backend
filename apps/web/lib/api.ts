@@ -237,4 +237,25 @@ export class APIClient {
       method: 'POST',
     });
   }
+
+  // Detection
+  async detectText(text: string, detailed: boolean = true): Promise<{
+    id: string;
+    score: number;
+    verdict: string;
+    confidence: number;
+    word_count: number;
+    analysis?: any;
+    can_verify: boolean;
+    created_at: string;
+  }> {
+    return this.request('/detect', {
+      method: 'POST',
+      body: JSON.stringify({ text, detailed }),
+    });
+  }
+
+  async getDetections(limit: number = 20, offset: number = 0): Promise<any[]> {
+    return this.request(`/detections?limit=${limit}&offset=${offset}`);
+  }
 }

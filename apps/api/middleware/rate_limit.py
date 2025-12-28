@@ -77,9 +77,13 @@ async def rate_limit_middleware(request: Request, call_next):
         # Proof submission: 10 per minute per user (prevent spam)
         allowed = await rate_limiter.check(f"rate:proof:{identifier}", 10, 60)
 
-    elif "/campaigns" in path and method == "POST":
-        # Campaign creation: 5 per hour per user (prevent abuse)
-        allowed = await rate_limiter.check(f"rate:campaign:{identifier}", 5, 3600)
+    elif "/checkout" in path and method == "POST":
+        # Checkout session creation: 10 per hour per user (allow multiple retries)
+        allowed = await rate_limiter.check(f"rate:checkout:{identifier}", 10, 3600)
+
+    elif path.endswith("/campaigns") and method == "POST":
+        # Campaign creation: 10 per hour per user (prevent abuse)
+        allowed = await rate_limiter.check(f"rate:campaign:{identifier}", 10, 3600)
 
     elif "/verify" in path and method == "POST":
         # Verification: 20 per minute (expensive ML operation)

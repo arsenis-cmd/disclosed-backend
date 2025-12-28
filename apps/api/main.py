@@ -4,7 +4,7 @@ from config import get_settings
 from database import db
 from middleware.rate_limit import rate_limit_middleware
 
-from routers import users, campaigns, tasks, proofs, verification, payments
+from routers import users, campaigns, tasks, proofs, verification, payments, detection
 
 settings = get_settings()
 
@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(detection.router, prefix=f"/api/{settings.api_version}", tags=["detection"])  # AI Detection - new core feature
 app.include_router(users.router, prefix=f"/api/{settings.api_version}/users", tags=["users"])
 app.include_router(campaigns.router, prefix=f"/api/{settings.api_version}/campaigns", tags=["campaigns"])
 app.include_router(tasks.router, prefix=f"/api/{settings.api_version}/tasks", tags=["tasks"])

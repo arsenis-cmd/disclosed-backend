@@ -1,7 +1,47 @@
-import Link from 'next/link'
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { APIClient } from '@/lib/api'
+import Link from 'next/link'
 
 export default function Home() {
+  const [text, setText] = useState('')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const { getToken } = useAuth()
+
+  const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length
+  const isValid = wordCount >= 50 && wordCount <= 10000
+
+  const handleAnalyze = async () => {
+    if (!isValid) {
+      setError('Please enter between 50 and 10,000 words')
+      return
+    }
+
+    setIsAnalyzing(true)
+    setError(null)
+
+    try {
+      const api = new APIClient(getToken)
+      const result = await api.detectText(text, true)
+
+      // Store result in sessionStorage and navigate to results page
+      sessionStorage.setItem('detectionResult', JSON.stringify(result))
+      sessionStorage.setItem('detectionText', text)
+      router.push(`/detect?id=${result.id}`)
+    } catch (err: any) {
+      console.error('Detection error:', err)
+      setError(err.message || 'Failed to analyze text. Please try again.')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background-primary relative overflow-hidden">
       {/* Animated Background */}
@@ -14,7 +54,7 @@ export default function Home() {
       {/* Header */}
       <header className="relative border-b border-border/50 glass-strong">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold gradient-text">Proof of Consideration</h1>
+          <h1 className="text-2xl font-bold gradient-text">AI Content Detector</h1>
           <div className="flex gap-4 items-center">
             <SignedOut>
               <SignInButton mode="modal">
@@ -29,6 +69,9 @@ export default function Home() {
               </SignUpButton>
             </SignedOut>
             <SignedIn>
+              <Link href="/dashboard" className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors">
+                Dashboard
+              </Link>
               <UserButton afterSignOutUrl="/" />
             </SignedIn>
           </div>
@@ -36,195 +79,153 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <main className="relative container mx-auto px-4 py-20">
-        <div className="max-w-5xl mx-auto text-center space-y-8 animate-fade-up">
-          <div className="inline-block">
-            <span className="badge-glow text-xs mb-8">
-              ✨ The Future of Human Attention
-            </span>
+      <main className="relative container mx-auto px-4 py-12">
+        <div className="max-w-5xl mx-auto space-y-8 animate-fade-up">
+          {/* Hero Text */}
+          <div className="text-center space-y-4">
+            <div className="inline-block">
+              <span className="badge-glow text-xs">
+                Powered by 6-Dimensional Analysis
+              </span>
+            </div>
+
+            <h2 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
+              Detect AI-Generated{' '}
+              <span className="cyber-text">Content</span>
+            </h2>
+
+            <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
+              Advanced AI detection analyzing perplexity, coherence, burstiness, originality,
+              personal voice, and pattern recognition.
+            </p>
           </div>
 
-          <h2 className="text-6xl md:text-7xl font-bold tracking-tight leading-tight">
-            Get Paid for{' '}
-            <span className="cyber-text">Genuine Attention</span>
-          </h2>
-
-          <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto leading-relaxed">
-            The first Web3 marketplace where buyers pay for verified human consideration,
-            and considerers earn money by demonstrating real cognitive engagement.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-            <Link href="/tasks" className="btn-primary text-base px-8 py-4">
-              Browse Tasks →
-            </Link>
-            <Link href="/campaigns/new" className="btn-secondary text-base px-8 py-4">
-              Create Campaign
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 pt-16 max-w-3xl mx-auto">
-            <div className="card-glass text-center p-6">
-              <div className="text-3xl font-bold gradient-text">$12K+</div>
-              <div className="text-sm text-text-tertiary mt-2">Paid Out</div>
-            </div>
-            <div className="card-glass text-center p-6">
-              <div className="text-3xl font-bold gradient-text">2.5K+</div>
-              <div className="text-sm text-text-tertiary mt-2">Verifications</div>
-            </div>
-            <div className="card-glass text-center p-6">
-              <div className="text-3xl font-bold gradient-text">92%</div>
-              <div className="text-sm text-text-tertiary mt-2">Pass Rate</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mt-32 max-w-6xl mx-auto">
-          <div className="card-glass hover:-translate-y-1 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-primary to-accent-secondary flex items-center justify-center flex-shrink-0 group-hover:shadow-accent-glow transition-shadow">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2 text-text-primary">For Considerers</h3>
-                <p className="text-text-secondary leading-relaxed">
-                  Browse tasks, provide thoughtful responses, and earn money when your genuine
-                  consideration is verified by our AI engine.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card-glass hover:-translate-y-1 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-success to-success-light flex items-center justify-center flex-shrink-0 group-hover:shadow-cyan-glow transition-shadow">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2 text-text-primary">For Buyers</h3>
-                <p className="text-text-secondary leading-relaxed">
-                  Create campaigns, set your criteria, and receive verified responses from
-                  real humans who've genuinely engaged with your content.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card-glass hover:-translate-y-1 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-secondary to-accent-pink flex items-center justify-center flex-shrink-0 group-hover:shadow-purple-glow transition-shadow">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2 text-text-primary">AI Verification</h3>
-                <p className="text-text-secondary leading-relaxed">
-                  Our verification engine scores responses on relevance, novelty, coherence,
-                  effort, and authenticity to ensure genuine consideration.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card-glass hover:-translate-y-1 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-warning to-warning-light flex items-center justify-center flex-shrink-0 group-hover:shadow-pink-glow transition-shadow">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2 text-text-primary">Instant Payouts</h3>
-                <p className="text-text-secondary leading-relaxed">
-                  Get paid immediately when your response passes verification.
-                  Secure payments processed through Stripe Connect.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* How it Works */}
-        <div className="mt-32 max-w-4xl mx-auto">
-          <h3 className="text-4xl font-bold text-center mb-4 gradient-text">How It Works</h3>
-          <p className="text-center text-text-secondary mb-16">Start earning in four simple steps</p>
-
-          <div className="space-y-6">
-            {[
-              {
-                num: '01',
-                title: 'Browse Available Tasks',
-                desc: 'Find tasks that match your interests. Each task shows the bounty amount and what type of response is needed.'
-              },
-              {
-                num: '02',
-                title: 'Engage with Content',
-                desc: 'Read, watch, or review the content. Take your time to form genuine thoughts and insights about what you\'ve considered.'
-              },
-              {
-                num: '03',
-                title: 'Submit Your Response',
-                desc: 'Write your thoughtful response. Our AI checks for relevance, originality, coherence, effort, and authenticity.'
-              },
-              {
-                num: '04',
-                title: 'Get Paid Instantly',
-                desc: 'If your response passes verification, you get paid immediately. See your scores and build your reputation.'
-              }
-            ].map((step, i) => (
-              <div key={i} className="card-glass hover:border-accent-primary/30 transition-all group">
-                <div className="flex gap-6 items-start">
-                  <div className="flex-shrink-0">
-                    <div className="text-5xl font-bold bg-gradient-to-br from-accent-primary to-accent-cyan bg-clip-text text-transparent">
-                      {step.num}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-xl font-semibold mb-2 text-text-primary group-hover:gradient-text transition-all">
-                      {step.title}
-                    </h4>
-                    <p className="text-text-secondary leading-relaxed">
-                      {step.desc}
-                    </p>
-                  </div>
+          {/* Detection Input */}
+          <div className="card-glass p-8 space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-text-primary">
+                  Paste your text to analyze
+                </label>
+                <div className="text-sm">
+                  <span className={wordCount < 50 ? 'text-warning' : wordCount > 10000 ? 'text-error' : 'text-success'}>
+                    {wordCount}
+                  </span>
+                  <span className="text-text-tertiary"> / 10,000 words</span>
+                  {wordCount < 50 && (
+                    <span className="text-warning ml-2">(min 50)</span>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* CTA Section */}
-        <div className="mt-32 relative">
-          <div className="card-glass p-12 md:p-16 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-cyber-gradient opacity-10" />
-            <div className="relative z-10">
-              <h3 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
-                Ready to Get Started?
-              </h3>
-              <p className="text-lg md:text-xl mb-8 text-text-secondary max-w-2xl mx-auto">
-                Join the marketplace for genuine human attention and start earning today
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Paste your essay, article, or any text content here. Minimum 50 words required for accurate detection..."
+                className="w-full h-64 px-4 py-3 bg-background-secondary border border-border rounded-lg
+                         text-text-primary placeholder-text-tertiary resize-none
+                         focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary
+                         transition-colors"
+                disabled={isAnalyzing}
+              />
+            </div>
+
+            {error && (
+              <div className="p-4 bg-error/10 border border-error/30 rounded-lg text-error text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleAnalyze}
+              disabled={!isValid || isAnalyzing}
+              className="w-full btn-primary py-4 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed
+                       flex items-center justify-center gap-2"
+            >
+              {isAnalyzing ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Analyzing...
+                </>
+              ) : (
+                'Check Now →'
+              )}
+            </button>
+          </div>
+
+          {/* Features */}
+          <div className="grid md:grid-cols-3 gap-4 mt-12">
+            <div className="card-glass text-center p-6">
+              <div className="text-3xl mb-2">🎯</div>
+              <h3 className="font-semibold mb-1 text-text-primary">6D Analysis</h3>
+              <p className="text-sm text-text-secondary">
+                Multi-dimensional scoring for accurate detection
               </p>
-              <SignUpButton mode="modal">
-                <button className="btn-cyber text-base px-8 py-4 text-lg">
-                  Create Free Account →
-                </button>
-              </SignUpButton>
+            </div>
+            <div className="card-glass text-center p-6">
+              <div className="text-3xl mb-2">⚡</div>
+              <h3 className="font-semibold mb-1 text-text-primary">Instant Results</h3>
+              <p className="text-sm text-text-secondary">
+                Get detailed analysis in seconds
+              </p>
+            </div>
+            <div className="card-glass text-center p-6">
+              <div className="text-3xl mb-2">🔒</div>
+              <h3 className="font-semibold mb-1 text-text-primary">Blockchain Proof</h3>
+              <p className="text-sm text-text-secondary">
+                Verify human authorship permanently
+              </p>
+            </div>
+          </div>
+
+          {/* How It Works */}
+          <div className="mt-16 space-y-6">
+            <h3 className="text-3xl font-bold text-center gradient-text">How It Works</h3>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {[
+                {
+                  title: 'Perplexity Analysis',
+                  desc: 'Measures text unpredictability using GPT-2. AI text tends to be more predictable.'
+                },
+                {
+                  title: 'Coherence Detection',
+                  desc: 'Analyzes logical flow and connections. Human writing has natural imperfections.'
+                },
+                {
+                  title: 'Burstiness Score',
+                  desc: 'Detects complexity variation. Humans vary sentence structure more than AI.'
+                },
+                {
+                  title: 'Originality Check',
+                  desc: 'Identifies AI-typical phrases and clichés vs. unique human phrasing.'
+                },
+                {
+                  title: 'Personal Voice',
+                  desc: 'Detects personal perspective and subjective language markers.'
+                },
+                {
+                  title: 'Pattern Recognition',
+                  desc: 'Identifies structural patterns common in AI-generated text.'
+                }
+              ].map((feature, i) => (
+                <div key={i} className="card-glass p-4 hover:border-accent-primary/30 transition-all">
+                  <h4 className="font-semibold mb-1 text-text-primary">{feature.title}</h4>
+                  <p className="text-sm text-text-secondary">{feature.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="relative border-t border-border/50 mt-32 py-8">
+      <footer className="relative border-t border-border/50 mt-16 py-8">
         <div className="container mx-auto px-4 text-center text-text-tertiary">
-          <p>© 2024 Proof of Consideration. All rights reserved.</p>
+          <p>© 2025 AI Content Detector. All rights reserved.</p>
         </div>
       </footer>
     </div>
