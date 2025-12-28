@@ -33,4 +33,4 @@ COPY apps/api/ .
 EXPOSE 8000
 
 # Run migrations then start server
-CMD npx prisma db push --accept-data-loss && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PORT:-8000} --timeout 120
+CMD npx prisma db push --schema=/app/prisma/schema.prisma --accept-data-loss && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PORT:-8000} --timeout 120
