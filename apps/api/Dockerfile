@@ -16,12 +16,12 @@ COPY apps/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy Prisma schema for migrations
-COPY packages/database/prisma ./prisma
-COPY packages/database/package.json ./prisma/
-COPY packages/database/prisma.config.ts ./prisma/
+COPY packages/database/package.json ./
+COPY packages/database/prisma.config.ts ./
+COPY packages/database/prisma/schema.prisma ./prisma/schema.prisma
 
 # Install Prisma
-RUN cd prisma && npm install prisma@latest
+RUN npm install prisma@latest
 
 # Copy application code
 COPY apps/api/ .
@@ -33,4 +33,4 @@ COPY apps/api/ .
 EXPOSE 8000
 
 # Run migrations then start server
-CMD cd prisma && npx prisma db push --accept-data-loss && cd /app && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PORT:-8000} --timeout 120
+CMD npx prisma db push --accept-data-loss && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PORT:-8000} --timeout 120
