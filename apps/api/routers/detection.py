@@ -96,11 +96,11 @@ async def detect_text(
             created_at=cached['createdAt'].isoformat()
         )
 
-    # Run AID engine detection
+    # Run lightweight AI detection
     try:
-        from services.detector import SimpleDetector
+        from services.simple_detector import LightweightDetector
 
-        detector = SimpleDetector()
+        detector = LightweightDetector()
         result = detector.analyze(text)
 
         # Map to our verdict system
