@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 import hashlib
 import logging
+import json
 from datetime import datetime
 
 from auth import get_current_user
@@ -144,7 +145,7 @@ async def detect_text(
             score,
             verdict,
             result['confidence'],
-            result['analysis'] if request.detailed else {},
+            json.dumps(result['analysis'] if request.detailed else {}),
             ip_address,
             user_agent
         )
