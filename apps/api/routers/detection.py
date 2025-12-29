@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 import hashlib
 import logging
 import json
+import secrets
 from datetime import datetime
 
 from auth import get_current_user
@@ -16,6 +17,14 @@ from database import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def generate_cuid() -> str:
+    """Generate a CUID-like ID (simplified version)"""
+    import time
+    timestamp = int(time.time() * 1000)
+    random_part = secrets.token_urlsafe(16)
+    return f"c{timestamp}{random_part}"[:25]
 
 
 class DetectRequest(BaseModel):
@@ -127,17 +136,19 @@ async def detect_text(
         user_agent = req.headers.get("user-agent", "")[:500]
 
         # Store detection
+        detection_id = generate_cuid()
         insert_query = """
             INSERT INTO "Detection" (
-                "userId", "textHash", "textPreview", "wordCount",
+                id, "userId", "textHash", "textPreview", "wordCount",
                 "score", "verdict", "confidence", "analysis",
                 "ipAddress", "userAgent"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING id, "createdAt"
         """
 
         detection = await db.fetchrow(
             insert_query,
+            detection_id,
             user_id,
             text_hash,
             text[:500],  # Preview
