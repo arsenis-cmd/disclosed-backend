@@ -4,7 +4,8 @@ from config import get_settings
 from database import db
 from middleware.rate_limit import rate_limit_middleware
 
-from routers import users, campaigns, tasks, proofs, verification, payments, detection
+from routers import users, campaigns, tasks, payments, detection
+# Temporarily disabled: proofs, verification (require heavy ML dependencies)
 
 settings = get_settings()
 
@@ -42,8 +43,8 @@ app.include_router(detection.router, prefix=f"/api/{settings.api_version}", tags
 app.include_router(users.router, prefix=f"/api/{settings.api_version}/users", tags=["users"])
 app.include_router(campaigns.router, prefix=f"/api/{settings.api_version}/campaigns", tags=["campaigns"])
 app.include_router(tasks.router, prefix=f"/api/{settings.api_version}/tasks", tags=["tasks"])
-app.include_router(proofs.router, prefix=f"/api/{settings.api_version}/proofs", tags=["proofs"])
-app.include_router(verification.router, prefix=f"/api/{settings.api_version}/verify", tags=["verification"])
+# app.include_router(proofs.router, prefix=f"/api/{settings.api_version}/proofs", tags=["proofs"])  # Disabled: requires heavy ML
+# app.include_router(verification.router, prefix=f"/api/{settings.api_version}/verify", tags=["verification"])  # Disabled: requires heavy ML
 app.include_router(payments.router, prefix=f"/api/{settings.api_version}/payments", tags=["payments"])
 
 
