@@ -22,15 +22,10 @@ class SimpleDetector:
     3. Focusing on the AI detection scores
     """
 
+    _engine = None  # Class-level lazy-loaded engine
+
     def __init__(self):
-        from aid.engine import AIDEngine
-        from aid.types import AIDConfig
-
-        # Use default config
-        config = AIDConfig()
-        self.engine = AIDEngine(config)
-
-        logger.info("SimpleDetector initialized with AID engine")
+        logger.info("SimpleDetector initialized (engine will load on first use)")
 
     def analyze(self, text: str) -> Dict[str, Any]:
         """
@@ -51,12 +46,21 @@ class SimpleDetector:
             }
         """
         try:
+            # Lazy load the AID engine on first use
+            if SimpleDetector._engine is None:
+                logger.info("Loading AID engine for first time...")
+                from aid.engine import AIDEngine
+                from aid.types import AIDConfig
+                config = AIDConfig()
+                SimpleDetector._engine = AIDEngine(config)
+                logger.info("AID engine loaded successfully")
+
             # For standalone detection, we use the text as both response and content
             # with a generic prompt
             generic_prompt = "Provide your thoughts on this content."
 
             # Run AID verification
-            result = self.engine.verify(
+            result = SimpleDetector._engine.verify(
                 response=text,
                 content=text,  # Self-referential
                 prompt=generic_prompt,
