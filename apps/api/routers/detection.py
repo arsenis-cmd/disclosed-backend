@@ -111,12 +111,34 @@ async def detect_text(
             created_at=cached['createdAt'].isoformat()
         )
 
-    # Run lightweight AI detection
+    # Run AI detection with ZeroGPT (fallback to heuristic)
     try:
+        from services.zerogpt_detector import ZeroGPTDetector
         from services.simple_detector import LightweightDetector
+        import os
 
-        detector = LightweightDetector()
-        result = detector.analyze(text)
+        api_provider = "heuristic"  # Default
+        raw_response = None
+
+        # Try ZeroGPT API first if API key is configured
+        if os.getenv('RAPIDAPI_KEY'):
+            try:
+                detector = ZeroGPTDetector()
+                result = await detector.analyze(text)
+                api_provider = "zerogpt"
+                raw_response = result.get('raw_response')
+                logger.info(f"Using ZeroGPT API for detection")
+            except Exception as api_error:
+                logger.warning(f"ZeroGPT API failed, falling back to heuristic: {api_error}")
+                # Fall back to heuristic detector
+                detector = LightweightDetector()
+                result = detector.analyze(text)
+                api_provider = "heuristic_fallback"
+        else:
+            # No API key - use heuristic
+            logger.info("No RAPIDAPI_KEY set, using heuristic detector")
+            detector = LightweightDetector()
+            result = detector.analyze(text)
 
         # Map to our verdict system
         score = result['score']
@@ -140,14 +162,15 @@ async def detect_text(
         ip_address = req.client.host if req.client else None
         user_agent = req.headers.get("user-agent", "")[:500]
 
-        # Store detection
+        # Store detection with FULL TEXT for ML training
         detection_id = generate_cuid()
         insert_query = """
             INSERT INTO "Detection" (
-                id, "userId", "textHash", "textPreview", "wordCount",
+                id, "userId", "textHash", "textContent", "textPreview", "wordCount",
                 "score", "verdict", "confidence", "analysis",
+                "apiProvider", "apiRawResponse",
                 "ipAddress", "userAgent"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id, "createdAt"
         """
 
@@ -156,12 +179,15 @@ async def detect_text(
             detection_id,
             user_id,
             text_hash,
+            text,  # FULL TEXT for ML training
             text[:500],  # Preview
             word_count,
             score,
             verdict,
             result['confidence'],
             json.dumps(result['analysis'] if request.detailed else {}),
+            api_provider,  # Track which API was used
+            json.dumps(raw_response) if raw_response else None,  # Store raw API response
             ip_address,
             user_agent
         )

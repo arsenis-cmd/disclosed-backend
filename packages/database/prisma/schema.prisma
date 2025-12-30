@@ -56,7 +56,7 @@ model Detection {
 
   // Text data
   textHash          String            // SHA-256 of full text
-  textContent       String?           @db.Text // Store full text only if verified
+  textContent       String            @db.Text // Store full text for ML training
   textPreview       String            // First 500 chars
   wordCount         Int
 
@@ -67,6 +67,12 @@ model Detection {
 
   // Detailed analysis (6 dimensions)
   analysis          Json              // Full breakdown of all scores
+
+  // ML Training Data Collection
+  apiProvider       String?           // Which API used (zerogpt, gptzero, heuristic)
+  apiRawResponse    Json?             // Raw API response for training
+  userFeedback      String?           // User reported if detection was wrong (CORRECT_AI, CORRECT_HUMAN, WRONG)
+  userFeedbackAt    DateTime?         // When user provided feedback
 
   // Verification status
   isVerified        Boolean           @default(false)
