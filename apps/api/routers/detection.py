@@ -95,13 +95,18 @@ async def detect_text(
 
     if cached:
         logger.info(f"Cache hit for text hash: {text_hash[:8]}...")
+        # Parse analysis if it's a string (from JSONB)
+        analysis_data = cached['analysis']
+        if isinstance(analysis_data, str):
+            analysis_data = json.loads(analysis_data)
+
         return DetectResponse(
             id=cached['id'],
             score=float(cached['score']),
             verdict=cached['verdict'].lower(),
             confidence=float(cached['confidence']),
             word_count=cached['wordCount'],
-            analysis=cached['analysis'] if request.detailed else None,
+            analysis=analysis_data if request.detailed else None,
             can_verify=float(cached['score']) >= 0.60 and not cached['isVerified'],
             created_at=cached['createdAt'].isoformat()
         )
